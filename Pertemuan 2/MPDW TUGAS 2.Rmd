@@ -1,0 +1,263 @@
+---
+title: "Tugas Praktikum MPDW Minggu 2"
+author: "Muhammad Farhan Adeva - G1401211062"
+date: "2023-09-09"
+output: html_document
+---
+
+#all Library
+```{r}
+library(TTR)
+library(forecast)
+library(lmtest)
+library(dplyr)
+library(orcutt)
+library(HoRM)
+library(ggplot2)
+library(corrplot)
+library("SciViews")
+```
+
+#Input data
+```{r}
+library('rio')
+data <- import("https://raw.githubusercontent.com/Adevaaaa/MPDW/main/Pertemuan%202/Data/Data_Tugas_Praktikum2.csv")
+```
+```{r}
+#Menamai Kolom
+high <- data$High
+low <- data$Low
+close <- data$Close
+Volume <- data$Volume
+open <- data$Open
+```
+
+```{r}
+#Melihat timeseries
+high.ts <- ts(high)
+low.ts <- ts(low)
+close.ts <- ts(close)
+open.ts <- ts(open)
+```
+
+```{r}
+# scatter plot close vs high
+plot(open,high, pch = 20, col = "blue",
+     main = "Scatter Plot Open vs High",
+     xlab = "High",
+     ylab = "Open")
+
+# scatter plot close vs low
+plot(open,low, pch = 20, col = "blue",
+     main = "Scatter Plot Open vs Low",
+     xlab = "Low",
+     ylab = "Open")
+
+# Cek Korelasi
+matriks <- cor(data)
+corrplot.mixed(matriks, upper = 'circle', lower = 'number', order = "original",
+               tl.col="black", tl.pos = "lt",diag = 'l',
+               number.digits=2, number.cex=1)
+
+# Plot time series
+## CLose
+ts.plot(open.ts, xlab="Time Period ", ylab="Open", 
+        main = "Time Series Plot")
+points(close.ts)
+
+## High
+ts.plot(high.ts, xlab="Time Period ", ylab="High", 
+        main = "Time Series Plot")
+points(high.ts)
+
+## Low
+ts.plot(low.ts, xlab="Time Period ", ylab="Low", 
+        main = "Time Series Plot")
+points(low.ts)
+```
+
+```{r}
+modelwan <- lm(Volume~close+open+high+low)
+summary(modelwan)
+
+#sisaan dan fitted value
+sisaan2<- residuals(modelwan)
+fitValue2<- predict(modelwan)
+
+#Diagnostik dengan eksploratif
+par(mfrow = c(2,2))
+qqnorm(sisaan2)
+qqline(sisaan2, col = "steelblue", lwd = 2)
+plot(fitValue2, sisaan2, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Fitted Values", main = "Sisaan vs Fitted Values")
+abline(a = 0, b = 0, lwd = 2)
+hist(sisaan2, col = "steelblue")
+plot(seq(1,200,1), sisaan2, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Order", main = "Sisaan vs Order")
+lines(seq(1,200,1), sisaan2, col = "red")
+abline(a = 0, b = 0, lwd = 2)
+```
+Dikarenakan data tersebut secara visualisasi tidak normal sehingga dilakukan transformasi dengan 1/x didapatkan hasil selanjutnya
+
+```{r}
+closebaru<- 1/(close)
+openbaru <- 1/(open)
+Volumebaru <- 1/(Volume)
+highbaru <- 1/(high)
+lowbaru <- 1/(low)
+modelwanwan <- lm(Volumebaru~closebaru+openbaru+highbaru+lowbaru)
+summary(modelwanwan)
+```
+Model yang dihasilkan adalah $$y_i=1.02*10^-6-8.12*10^-3x1_t-2.24*10^-3x2_t+1.31*10^-1x3_t-1.17*10^-1x4_t$$ Berdasarkan ringkasan model dapat diketahui bahwa hasil uji F memiliki *p-value* \< $\alpha$ (5%). Artinya, minimal terdapat satu variabel yang berpengaruh nyata terhadap model. Hasil uji-t parsial parameter regresi, yaitu koefisien regresi juga menunjukkan hal yang sama, yaitu memiliki *p-value* \< $\alpha$ (5%) sehingga nyata dalam taraf 5% untuk high dan low, untuk open dan close tidak *p-value* \> $\alpha$ (5%). Selanjutnya dapat dilihat juga nilai $R^2=0.5006$. Artinya, sebesar 50.06% keragaman nilai Volume dapat dijelaskan oleh peubah x. Hasil ini menunjukkan hasil yang bagus, seolah mendapatkan hasil terbaik. Namun, kita perlu melakukan uji terhadap sisaannya seperti berikut ini.
+
+```{r}
+#sisaan dan fitted value
+sisaan1<- residuals(modelwanwan)
+fitValue1<- predict(modelwanwan)
+
+#Diagnostik dengan eksploratif
+par(mfrow = c(2,2))
+qqnorm(sisaan1)
+qqline(sisaan1, col = "steelblue", lwd = 2)
+plot(fitValue1, sisaan1, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Fitted Values", main = "Sisaan vs Fitted Values")
+abline(a = 0, b = 0, lwd = 2)
+hist(sisaan1, col = "steelblue")
+plot(seq(1,200,1), sisaan1, col = "steelblue", pch = 20, xlab = "Sisaan", ylab = "Order", main = "Sisaan vs Order")
+lines(seq(1,200,1), sisaan1, col = "red")
+abline(a = 0, b = 0, lwd = 2)
+```
+Secara visualisasi data tersebut terlihat normal sehingga dilakukan pengujian testnya
+
+```{r}
+#H0: sisaan mengikuti sebaran normal
+#H1: sisaan tidak mengikuti sebaran normal
+shapiro.test(sisaan1)
+ks.test(sisaan1, "pnorm", mean=mean(sisaan1), sd=sd(sisaan1))
+```
+setelah dilakukan pengujian, didapatkan hasil melalui 2 test yaitu test Shapiro didapatkan hasil tak tolak H0 maka data tersebut normal dan begitu juga kolmogorov-Smirnov tak tolak H0
+
+```{r}
+par(mfrow = c(1,2))
+acf(sisaan1)
+pacf(sisaan1)
+```
+Berdasarkan plot ACF dan PACF, terlihat terdapat data yang berada diluar rentang batas sehingga ada yang signifikan. Namun, untuk lebih memastikan akan dilakukan uji formal dengan uji Durbin Watson.
+
+```{r}
+#H0: tidak ada autokorelasi
+#H1: ada autokorelasi
+dwtest(modelwanwan)
+```
+Berdasarkan hasil DW Test, didapatkan nilai $DW = 2.0052$ dan *p-value* = $0.0001876$. Dengan nilai *p-value* \< 0.05 dapat disimpulkan bahwa tolak H0, cukup bukti mengatakan adanya autokorelasi. Oleh karena itu, diperlukan penangan autokorelasi. Penanganan yang akan digunakan menggunakan dua metode, yaitu Cochrane-Orcutt dan Hildret-Lu.
+
+
+```{r}
+#Penanganan Autokorelasi Cochrane-Orcutt
+#H0: tidak ada autokorelasi
+#H1: ada autokorelasi
+modelCOwanwan<-cochrane.orcutt(modelwanwan)
+modelCOwanwan
+```
+Hasil keluaran model setelah dilakukan penanganan adalah sebagai berikut. $$y_i=0.000001-0.0079x1_t-0.0057x2_t+0.112x3_t-0.097x4_t$$ Hasil juga menunjukkan bahwa nilai DW dan p-value meningkat menjadi $1.511$ dan $2.019$. dengan nilai *p-value* \> 0.05, artinya belum cukup bukti menyatakan bahwa sisaan terdapat autokorelasi pada taraf nyata 5%. Untuk nilai $ρ ̂$ optimum yang digunakan adalah $-0.0322$. Nilai tersebut dapat diketahui dengan *syntax* berikut.
+
+```{r}
+#Rho optimum
+rhowanwan<- modelCOwanwan$rho
+rhowanwan
+```
+
+
+#Transformasi Manual
+```{r}
+#Transformasi Manual
+volumebaru.trans<- Volumebaru[-1]-Volumebaru[-200]*rhowanwan
+highbaru.trans<- highbaru[-1]-highbaru[-200]*rhowanwan
+lowbaru.trans<- lowbaru[-1]-lowbaru[-200]*rhowanwan
+openbaru.trans<- openbaru[-1]-openbaru[-200]*rhowanwan
+closebaru.trans<- closebaru[-1]-closebaru[-200]*rhowanwan
+modelCOmanualwanwan<- lm(volumebaru.trans~highbaru.trans+lowbaru.trans+openbaru.trans+closebaru.trans)
+summary(modelCOmanualwanwan)
+```
+```{r}
+#Mencari Penduga Koefisien Regresi setelah Transformasi ke Persamaan Awal
+b0bintang1 <- modelCOmanualwanwan$coefficients[1]
+b0.1<- b0bintang1/(1-rhowanwan)
+b1.1 <- modelCOmanualwanwan$coefficients[2]
+b2.1 <- modelCOmanualwanwan$coefficients[3]
+b3.1 <- modelCOmanualwanwan$coefficients[4]
+b4.1 <- modelCOmanualwanwan$coefficients[5]
+b0.1
+b1.1
+b2.1
+b3.1
+b4.1
+```
+```{r}
+hildreth.lu.func<- function(r, model){
+  x1 <- model.matrix(model)[,2]
+  x2 <- model.matrix(model)[,3]
+  x3 <- model.matrix(model)[,4]
+  x4 <- model.matrix(model)[,5]
+  y <- model.response(model.frame(model))
+  n <- length(y)
+  t <- 2:n
+  y <- y[t]-r*y[t-1]
+  x1 <- x1[t]-r*x1[t-1]
+  x2 <- x2[t]-r*x2[t-1]
+  x3 <- x3[t]-r*x3[t-1]
+  x4 <- x4[t]-r*x4[t-1]
+  
+  return(lm(y~x1+x2+x3+x4))
+}
+
+#Pencariab rho yang meminimumkan SSE
+r1 <- c(seq(0.1,0.9, by= 0.1))
+tab1 <- data.frame("rho" = r1, "SSE" = sapply(r1, function(i){deviance(hildreth.lu.func(i, modelwanwan))}))
+tab1
+```
+Pertama-tama akan dicari di mana kira-kira $ρ$ yang menghasilkan SSE minimum. Pada hasil di atas terlihat $ρ$ minimum ketika 0.3. Namun, hasil tersebut masih kurang teliti sehingga akan dicari kembali $ρ$ yang lebih optimum dengan ketelitian yang lebih. Jika sebelumnya jarak antar $ρ$ yang dicari adalah 0.1, kali ini jarak antar $ρ$ adalah 0.001 dan dilakukan pada selang 0.2 sampai dengan 0.6.
+
+
+```{r}
+rOpt1<- seq(0.2,0.6, by= 0.001)
+tabOpt1 <- data.frame("rho" = rOpt1, "SSE" = sapply(rOpt1, function(i){deviance(hildreth.lu.func(i, modelwanwan))}))
+head(tabOpt1[order(tabOpt1$SSE),])
+
+#Grafik SSE optimum
+par(mfrow = c(1,1))
+plot(tab1$SSE ~ tab1$rho , type = "l", xlab = "Rho", ylab = "SSE")
+abline(v = tabOpt1[tabOpt1$SSE==min(tabOpt1$SSE),"rho"], lty = 2, col="red",lwd=2)
+text(x=0.318, y=1.085712*10^-11	, labels = "rho=0.318", cex = 0.8)
+```
+Perhitungan yang dilakukan aplikasi `R` menunjukkan bahwa nilai $ρ$ optimum, yaitu saat SSE terkecil terdapat pada nilai $ρ=0.318$. Hal tersebut juga ditunjukkan pada plot. Selanjutnya, model dapat didapatkan dengan mengevaluasi nilai $ρ$ ke dalam fungsi `hildreth.lu.func`, serta dilanjutkan dengan pengujian autokorelasi dengan uji Durbin-Watson. Namun, setelah pengecekan tersebut tidak lupa koefisien regresi tersebut digunakan untuk transformasi balik. Persamaan hasil transformasi itulah yang menjadi persamaan sesungguhnya.
+
+```{r}
+#Model terbaik
+modelHLwanwan <- hildreth.lu.func(0.318, modelwanwan)
+summary(modelHLwanwan)
+
+#Transformasi Balik
+cat("y = ", coef(modelHLwanwan)[1]/(1-0.318), coef(modelHLwanwan)[2],"x1",coef(modelHLwanwan)[3],"x2",'+',coef(modelHLwanwan)[4],'x3',coef(modelHLwanwan)[5],'x4' ,sep = "")
+```
+Setelah dilakukan tranformasi balik, didapatkan model dengan metode Hildreth-Lu sebagai berikut. $$y_i=y = 1.045987e-06-0.007985115x1_t-0.005713609x2_t+0.1123746x3_t-0.09661358x4$$
+
+```{r}
+#Deteksi autokorelasi
+dwtest(modelHLwanwan)
+```
+Hasil uji Durbin-Watson juga menunjukkan  H *p-value* sebesar $0.5479$, di mana *p-value* \> $\alpha$=5%. Artinya tak tolak $H_0$ atau belum cukup bukti menyatakan bahwa ada autokorelasi dalam data nilai Volume dengan metode Hildreth-Lu pada taraf nyata 5%.
+
+```{r}
+sseModelawal1 <- anova(modelwanwan)$`Sum Sq`[c(-1,-2)]
+sseModelCO1 <- anova(modelCOmanualwanwan)$`Sum Sq`[c(-1,-2)]
+sseModelHL1 <- anova(modelHLwanwan)$`Sum Sq`[c(-1)]
+mseModelawal1 <- sseModelawal1/length(Volumebaru)
+mseModelCO1 <- sseModelCO1/length(Volumebaru)
+mseModelHL1 <- sseModelHL1/length(Volumebaru)
+akurasi1 <- matrix(c(sseModelawal1,sseModelCO1,sseModelHL1,
+                    mseModelawal1,mseModelCO1,mseModelHL1),nrow=2,ncol=3,byrow = T)
+colnames(akurasi1) <- c("Model Awal", "Model Cochrane-Orcutt", "Model Hildreth-Lu")
+row.names(akurasi1) <- c("SSE","MSE")
+akurasi1
+```
+# Simpulan
+
+Autokorelasi yang terdapat pada data Volume terjadi akibat adanya korelasi di antara unsur penyusunnya. Adanya autokorelasi menyebabkan model regresi kurang baik karena akan meingkatkan galatnya. Autokorelasi dapat dideteksi secara eksploratif melalui plot sisaan, ACF, dan PACF, serta dengan uji formal Durbin-Watson. Namun, autokorelasi tersebut dapat ditangani dengan metode Cochrane-Orcutt dan Hildreth-Lu. Kedua metode menghasilkan nilai SSE yang sama, artinya keduanya baik untuk digunakan
