@@ -198,8 +198,8 @@ BIC(model3.ardl.opt1)
 
 # Model dlm q=1
 ```{r}
-# sama dengan model dlm q=1
-cons_lm1 <- dynlm(High ~ Low+L(Low),data = train.ts)
+# sama dengan model dlm q=2
+cons_lm1 <- dynlm(High ~ Low+L(Low),L(Low,2),data = train.ts)
 ```
 
 # Model dlm Optimum
