@@ -1,0 +1,175 @@
+---
+title: "Tugas Pekan 5 MPDW"
+author: "Muhammad Farhan Adeva - G1401211062"
+date: "2023-09-26"
+output: html_document
+---
+
+
+#library
+```{r}
+library(ggplot2)
+library(tsibble)
+library(tseries)
+library(MASS)
+```
+
+# Input Data
+```{r}
+library('rio')
+datampdw <- import("https://raw.githubusercontent.com/Adevaaaa/MPDW/main/Data_Tugas/Data%20Tugas%20MPDW%201.csv")
+```
+
+```{r}
+sepuh <- ts(datampdw$Suhu)
+```
+
+```{r}
+plot_stas <- sepuh |> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) + geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+plot_stas
+```
+
+```{r}
+mean(sepuh)
+var(sepuh)
+```
+Plot deret waktu di atas menunjukkan bahwa data stasioner dalam rataan, ditandai dengan data yang menyebar di sekitar nilai tengahnya (27.99) dan stasioner dalam ragam, ditandai dengan lebar pita yang cenderung sama.
+
+# Plot ACF
+```{r}
+acf(sepuh)
+```
+Berdasarkan plot ACF, terlihat bahwa plot ACF pada data tersebut cenderung tails off dan membentuk gelombang sinus.
+
+# Uji ADF
+```{r}
+tseries::adf.test(sepuh)
+```
+$H_{0} : $ Data tidak stasioner dalam rataan
+$H_{1}:$ Data stasioner dalam rataan
+
+Berdasarkan uji ADF tersebut, didapat p-value sebesar 0.02 yang lebih kecil dari taraf nyata 5% sehingga tolak $H_{0}$ dan menandakan bahwa data stasioner dalam rataan. 
+ Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
+
+# Plot Box-Cox
+```{r}
+n <- length(sepuh)
+index <- seq(1:n)
+bc <- boxcox(sepuh~index, lambda = seq(-8,4,by=1))
+```
+
+
+```{r}
+#Nilai Rounded Lambda
+lambda <- bc$x[which.max(bc$y)]
+lambda
+```
+```{r}
+#Selang Kepercayaan ( Blom  Bener)
+bc$x[bc$y > max(bc$y) - 1/2 *qchisq(.95,1)]
+```
+
+Gambar di atas menunjukkan nilai rounded value $\lambda$ optimum sebesar -1.97 dan pada selang kepercayaan 95% nilai memiliki batas bawah -7.87 dan batas atas 3.75. Selang tersebut memuat nilai satu sehingga dapat dikatakan bahwa data bangkitan stasioner dalam ragam.
+
+# Partisi Data
+```{r}
+sepuh1 <- sepuh[1:63] |> ts()
+mean(sepuh1)
+var(sepuh1)
+```
+#Plot Time Series
+```{r}
+sepuh1 |> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) +
+  geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+```
+
+Plot deret waktu di atas menunjukkan bahwa data stasioner dalam rataan, ditandai dengan data yang menyebar di sekitar nilai tengahnya (27.83) dan stasioner dalam ragam, ditandai dengan lebar pita yang cenderung sama.
+
+#Plot ACF
+```{r}
+acf(sepuh1)
+```
+Berdasarkan plot ACF, terlihat bahwa plot ACF pada data tersebut cenderung tails off dan membentuk gelombang sinus.
+
+#Uji ADF
+```{r}
+tseries::adf.test(sepuh1)
+```
+$H_{0} : $ Data tidak stasioner dalam rataan
+$H_{1}:$ Data stasioner dalam rataan
+
+Berdasarkan uji ADF tersebut, didapat p-value sebesar 0.03 yang lebih kecil dari taraf nyata 5% sehingga tolak $H_{0}$ dan menandakan bahwa data stasioner dalam rataan. 
+ Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
+
+#Plot BoxCox
+```{r}
+index <- seq(1:length(sepuh1))
+bc1 <- boxcox(sepuh1~index,lambda= seq(-8,15,by=1))
+```
+
+
+```{r}
+#Nilai Rounded Lambda
+lambda1 <- bc1$x[which.max(bc1$y)]
+lambda1
+```
+```{r}
+#Selang Kepercayaan
+bc$x[bc1$y > max(bc1$y) - 1/2 * qchisq(.95,1)]
+```
+
+Gambar di atas menunjukkan nilai rounded value $\lambda$ optimum sebesar 3.61 dan pada selang kepercayaan 95% nilai memiliki batas bawah -7.39 dan batas atas 3.63. Selang tersebut memuat nilai satu sehingga dapat dikatakan bahwa data bangkitan stasioner dalam ragam.
+
+# Bagian 2
+```{r}
+sepuh2 <- sepuh[1:126]|> ts()
+mean(sepuh2)
+var(sepuh2)
+```
+#Plot Time Series
+```{r}
+sepuh2|> as_tsibble() |> 
+  ggplot(aes(x = index, y = value)) +
+  geom_line() + theme_bw() +
+  xlab("Obs") + ylab("Nilai")
+```
+Plot deret waktu di atas menunjukkan bahwa data stasioner dalam rataan, ditandai dengan data yang menyebar di sekitar nilai tengahnya (28.00) dan stasioner dalam ragam, ditandai dengan lebar pita yang cenderung sama.
+
+
+#Plot ACF
+```{r}
+acf(sepuh2)
+```
+Berdasarkan plot ACF, terlihat bahwa plot 
+ACF pada data tersebut cenderung tails off dan membentuk gelombang sinus.
+
+#Uji ADF
+```{r}
+adf.test(sepuh2)
+```
+$H_{0} : $ Data tidak stasioner dalam rataan
+$H_{1}:$ Data stasioner dalam rataan
+
+Berdasarkan uji ADF tersebut, didapat p-value sebesar 0.02 yang lebih kecil dari taraf nyata 5% sehingga tolak $H_{0}$ dan menandakan bahwa data stasioner dalam rataan. 
+ Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
+
+#Plot BoxCox
+```{r}
+index <- seq(1:126)
+bc2 = boxcox(sepuh2~index, lambda = seq(-9,5,by=1))
+```
+```{r}
+#Nilai Rounded Lambda
+lambda2 <- bc2$x[which.max(bc2$y)]
+lambda2
+```
+```{r}
+#Selang Kepercayaan
+bc2$x[bc2$y > max(bc2$y) - 1/2 * qchisq(.95,1)]
+```
+
+Gambar di atas menunjukkan nilai rounded value $\lambda$ optimum sebesar -1.78 dan pada selang kepercayaan 95% nilai memiliki batas bawah -7.86 dan batas atas 4.29. Selang tersebut memuat nilai satu sehingga dapat dikatakan bahwa data bangkitan stasioner dalam ragam.
